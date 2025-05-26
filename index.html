@@ -1,16 +1,11 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Balloon Popper 🎈</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Balloon Popper 3.0 🎈</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: Arial, sans-serif;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
 
     body {
       background: linear-gradient(to top, #a0e7e5, #b4f8c8);
@@ -22,11 +17,7 @@
       height: 100vh;
     }
 
-    h1 {
-      font-size: 2em;
-      margin-bottom: 20px;
-      color: #333;
-    }
+    h1 { font-size: 2em; margin: 10px; color: #333; }
 
     #start-screen, #game-screen, #end-screen {
       display: none;
@@ -40,13 +31,13 @@
       position: relative;
     }
 
-    #score, #timer {
-      font-size: 1.5em;
-      margin: 10px;
+    #score, #timer, #highscore {
+      font-size: 1.2em;
+      margin: 5px;
       color: #333;
     }
 
-    #balloon {
+    .balloon {
       width: 60px;
       height: 80px;
       background: red;
@@ -56,10 +47,19 @@
       box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
 
+    .string {
+      width: 2px;
+      height: 30px;
+      background: #555;
+      position: absolute;
+      left: 29px;
+      top: 80px;
+    }
+
     button {
       padding: 10px 20px;
       margin: 10px;
-      font-size: 1.2em;
+      font-size: 1.1em;
       border: none;
       border-radius: 10px;
       background-color: #ff6392;
@@ -68,34 +68,50 @@
       transition: background 0.3s;
     }
 
-    button:hover {
-      background-color: #ff4e85;
+    button:hover { background-color: #ff4e85; }
+
+    select {
+      padding: 10px;
+      font-size: 1em;
+      margin-bottom: 10px;
+      border-radius: 5px;
     }
   </style>
 </head>
 <body>
 
   <div id="start-screen" style="display: flex;">
-    <h1>🎈 Balloon Popper</h1>
+    <h1>🎈 Balloon Popper 3.0</h1>
+    <label for="difficulty">Schwierigkeitsgrad:</label>
+    <select id="difficulty">
+      <option value="easy">Leicht</option>
+      <option value="medium" selected>Mittel</option>
+      <option value="hard">Schwer</option>
+    </select>
     <button onclick="startGame()">Spiel starten</button>
   </div>
 
   <div id="game-screen">
     <div id="score">Punkte: 0</div>
     <div id="timer">Zeit: 30s</div>
+    <div id="highscore">🏆 Highscore: 0</div>
   </div>
 
   <div id="end-screen">
     <h1>🧠 Spiel vorbei!</h1>
     <div id="final-score">Du hast 0 Punkte erreicht.</div>
+    <div id="new-highscore" style="font-weight: bold; color: green;"></div>
     <button onclick="restartGame()">Nochmal spielen</button>
   </div>
 
   <script>
     let score = 0;
     let timeLeft = 30;
-    let gameInterval;
+    let spawnRate = 1000;
+    let speedMultiplier = 1;
     let balloonInterval;
+    let gameInterval;
+    let highscore = localStorage.getItem("balloon-highscore") || 0;
 
     const startScreen = document.getElementById("start-screen");
     const gameScreen = document.getElementById("game-screen");
@@ -103,19 +119,42 @@
     const scoreDisplay = document.getElementById("score");
     const timerDisplay = document.getElementById("timer");
     const finalScore = document.getElementById("final-score");
+    const highscoreDisplay = document.getElementById("highscore");
+    const newHighscoreMsg = document.getElementById("new-highscore");
+
+    function setDifficultySettings(difficulty) {
+      switch (difficulty) {
+        case "easy":
+          spawnRate = 1300;
+          speedMultiplier = 0.8;
+          break;
+        case "medium":
+          spawnRate = 1000;
+          speedMultiplier = 1.0;
+          break;
+        case "hard":
+          spawnRate = 700;
+          speedMultiplier = 1.3;
+          break;
+      }
+    }
 
     function startGame() {
+      const difficulty = document.getElementById("difficulty").value;
+      setDifficultySettings(difficulty);
+
       score = 0;
       timeLeft = 30;
       scoreDisplay.textContent = "Punkte: " + score;
       timerDisplay.textContent = "Zeit: " + timeLeft + "s";
+      highscoreDisplay.textContent = "🏆 Highscore: " + highscore;
 
       startScreen.style.display = "none";
       endScreen.style.display = "none";
       gameScreen.style.display = "block";
 
       gameInterval = setInterval(updateTimer, 1000);
-      balloonInterval = setInterval(spawnBalloon, 800);
+      balloonInterval = setInterval(spawnBalloon, spawnRate);
     }
 
     function updateTimer() {
@@ -130,46 +169,81 @@
     function spawnBalloon() {
       const balloon = document.createElement("div");
       balloon.classList.add("balloon");
-      balloon.id = "balloon";
-      balloon.style.left = Math.random() * (window.innerWidth - 60) + "px";
-      balloon.style.top = window.innerHeight + "px";
 
-      balloon.addEventListener("click", () => {
-        score++;
+      const isRising = Math.random() > 0.3;
+      balloon.dataset.direction = isRising ? "up" : "down";
+
+      const x = Math.random() * (window.innerWidth - 60);
+      balloon.style.left = x + "px";
+      balloon.style.top = isRising ? window.innerHeight + "px" : "-100px";
+
+      const string = document.createElement("div");
+      string.classList.add("string");
+      balloon.appendChild(string);
+
+      const popBalloon = () => {
+        if (balloon.dataset.direction === "up") {
+          score++;
+        } else {
+          score--;
+        }
         scoreDisplay.textContent = "Punkte: " + score;
         balloon.remove();
-      });
+      };
+
+      // Touch & Klick
+      balloon.addEventListener("click", popBalloon);
+      balloon.addEventListener("touchstart", popBalloon);
 
       gameScreen.appendChild(balloon);
 
-      let riseInterval = setInterval(() => {
+      const move = () => {
         let top = parseFloat(balloon.style.top);
-        if (top < -80) {
-          balloon.remove();
-          clearInterval(riseInterval);
+        if (balloon.dataset.direction === "up") {
+          if (top < -100) {
+            balloon.remove();
+            clearInterval(riseInterval);
+          } else {
+            balloon.style.top = (top - 3 * speedMultiplier) + "px";
+          }
         } else {
-          balloon.style.top = (top - 3) + "px";
+          if (top > window.innerHeight + 100) {
+            balloon.remove();
+            clearInterval(riseInterval);
+          } else {
+            balloon.style.top = (top + 2 * speedMultiplier) + "px";
+          }
         }
-      }, 20);
+      };
+
+      const riseInterval = setInterval(move, 20);
     }
 
     function endGame() {
       clearInterval(gameInterval);
       clearInterval(balloonInterval);
-      document.querySelectorAll("#balloon").forEach(b => b.remove());
+      document.querySelectorAll(".balloon").forEach(b => b.remove());
 
       gameScreen.style.display = "none";
       endScreen.style.display = "flex";
+
       finalScore.textContent = "Du hast " + score + " Punkte erreicht.";
+      if (score > highscore) {
+        highscore = score;
+        localStorage.setItem("balloon-highscore", highscore);
+        newHighscoreMsg.textContent = "🎉 Neuer Highscore!";
+      } else {
+        newHighscoreMsg.textContent = "";
+      }
     }
 
     function restartGame() {
       startGame();
     }
 
-    // Automatisch Startscreen anzeigen
     window.onload = () => {
       startScreen.style.display = "flex";
+      highscoreDisplay.textContent = "🏆 Highscore: " + highscore;
     };
   </script>
 </body>
