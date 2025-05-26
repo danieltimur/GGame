@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Balloon Popper 🎈</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(to top, #a0e7e5, #b4f8c8);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    h1 {
+      font-size: 2em;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    #start-screen, #game-screen, #end-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #game-screen {
+      width: 100%;
+      height: 100vh;
+      position: relative;
+    }
+
+    #score, #timer {
+      font-size: 1.5em;
+      margin: 10px;
+      color: #333;
+    }
+
+    #balloon {
+      width: 60px;
+      height: 80px;
+      background: red;
+      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      position: absolute;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      font-size: 1.2em;
+      border: none;
+      border-radius: 10px;
+      background-color: #ff6392;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background-color: #ff4e85;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="start-screen" style="display: flex;">
+    <h1>🎈 Balloon Popper</h1>
+    <button onclick="startGame()">Spiel starten</button>
+  </div>
+
+  <div id="game-screen">
+    <div id="score">Punkte: 0</div>
+    <div id="timer">Zeit: 30s</div>
+  </div>
+
+  <div id="end-screen">
+    <h1>🧠 Spiel vorbei!</h1>
+    <div id="final-score">Du hast 0 Punkte erreicht.</div>
+    <button onclick="restartGame()">Nochmal spielen</button>
+  </div>
+
+  <script>
+    let score = 0;
+    let timeLeft = 30;
+    let gameInterval;
+    let balloonInterval;
+
+    const startScreen = document.getElementById("start-screen");
+    const gameScreen = document.getElementById("game-screen");
+    const endScreen = document.getElementById("end-screen");
+    const scoreDisplay = document.getElementById("score");
+    const timerDisplay = document.getElementById("timer");
+    const finalScore = document.getElementById("final-score");
+
+    function startGame() {
+      score = 0;
+      timeLeft = 30;
+      scoreDisplay.textContent = "Punkte: " + score;
+      timerDisplay.textContent = "Zeit: " + timeLeft + "s";
+
+      startScreen.style.display = "none";
+      endScreen.style.display = "none";
+      gameScreen.style.display = "block";
+
+      gameInterval = setInterval(updateTimer, 1000);
+      balloonInterval = setInterval(spawnBalloon, 800);
+    }
+
+    function updateTimer() {
+      timeLeft--;
+      timerDisplay.textContent = "Zeit: " + timeLeft + "s";
+
+      if (timeLeft <= 0) {
+        endGame();
+      }
+    }
+
+    function spawnBalloon() {
+      const balloon = document.createElement("div");
+      balloon.classList.add("balloon");
+      balloon.id = "balloon";
+      balloon.style.left = Math.random() * (window.innerWidth - 60) + "px";
+      balloon.style.top = window.innerHeight + "px";
+
+      balloon.addEventListener("click", () => {
+        score++;
+        scoreDisplay.textContent = "Punkte: " + score;
+        balloon.remove();
+      });
+
+      gameScreen.appendChild(balloon);
+
+      let riseInterval = setInterval(() => {
+        let top = parseFloat(balloon.style.top);
+        if (top < -80) {
+          balloon.remove();
+          clearInterval(riseInterval);
+        } else {
+          balloon.style.top = (top - 3) + "px";
+        }
+      }, 20);
+    }
+
+    function endGame() {
+      clearInterval(gameInterval);
+      clearInterval(balloonInterval);
+      document.querySelectorAll("#balloon").forEach(b => b.remove());
+
+      gameScreen.style.display = "none";
+      endScreen.style.display = "flex";
+      finalScore.textContent = "Du hast " + score + " Punkte erreicht.";
+    }
+
+    function restartGame() {
+      startGame();
+    }
+
+    // Automatisch Startscreen anzeigen
+    window.onload = () => {
+      startScreen.style.display = "flex";
+    };
+  </script>
+</body>
+</html>
